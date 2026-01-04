@@ -1,0 +1,102 @@
+# Solution 0.4: Multi-stage Dockerfile with uv
+# syntax=docker/dockerfile:1
+
+# ============================================
+# Stage 1: Build environment with uv
+# ============================================
+# Using Astral's official uv image with Python 3.11
+# Image verification: Check SHA256 digest at ghcr.io/astral-sh/uv
+FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim AS builder
+
+# Metadata labels for image identification
+LABEL maintainer="your-team@example.com" \
+      version="1.0.0" \
+      description="Airflow development image with uv package manager"
+
+# Configure uv for optimal Docker builds
+# UV_COMPILE_BYTECODE: Compile Python to bytecode for faster startup
+# UV_LINK_MODE: Copy files instead of symlinks (required for multi-stage)
+# UV_PYTHON_DOWNLOADS: Disable Python downloads, use system Python
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    UV_PYTHON_DOWNLOADS=0
+
+WORKDIR /app
+
+# Copy dependency files first (for layer caching)
+# These files change less frequently than source code
+COPY pyproject.toml uv.lock ./
+
+# Install dependencies WITHOUT installing the project itself
+# This layer is cached unless pyproject.toml or uv.lock changes
+# --locked: Use exact versions from uv.lock
+# --no-install-project: Don't install the project, just dependencies
+# --no-dev: Skip development dependencies
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --locked --no-install-project --no-dev
+
+# Copy application source code
+COPY dags/ ./dags/
+COPY plugins/ ./plugins/
+
+# Install the project itself (if it's a package)
+# This is a separate layer so DAG changes don't invalidate dependency cache
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --locked --no-dev
+
+# ============================================
+# Stage 2: Runtime image (minimal, no uv)
+# ============================================
+# Using official Python slim image for minimal attack surface
+# Image verification: Check SHA256 digest at hub.docker.com/_/python
+FROM python:3.11-slim-bookworm
+
+# Install only necessary runtime dependencies
+# Minimizing packages reduces security attack surface
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # PostgreSQL client library (for postgres provider)
+    libpq5 \
+    # Curl for health checks
+    curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Create non-root user for security
+# Using UID/GID 1000 for compatibility with most systems
+# Running as non-root prevents container escape attacks
+RUN groupadd --system --gid 1000 airflow \
+    && useradd --system --gid 1000 --uid 1000 --create-home airflow
+
+# Copy virtual environment from builder stage
+# This includes all installed packages
+COPY --from=builder --chown=airflow:airflow /app/.venv /app/.venv
+
+# Copy application code
+COPY --from=builder --chown=airflow:airflow /app/dags /opt/airflow/dags
+COPY --from=builder --chown=airflow:airflow /app/plugins /opt/airflow/plugins
+
+# Set environment variables
+# PYTHONUNBUFFERED: Ensure logs are output immediately
+# PYTHONDONTWRITEBYTECODE: Prevent .pyc files (already compiled in builder)
+ENV PATH="/app/.venv/bin:$PATH" \
+    AIRFLOW_HOME=/opt/airflow \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+# Create necessary directories with proper ownership
+RUN mkdir -p /opt/airflow/logs /opt/airflow/config \
+    && chown -R airflow:airflow /opt/airflow
+
+# Switch to non-root user (security best practice)
+USER airflow
+WORKDIR /opt/airflow
+
+# Health check for container orchestration
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
+
+# Default command (can be overridden in docker-compose)
+CMD ["airflow", "version"]
+
+# Expose the webserver port
+EXPOSE 8080

@@ -1,0 +1,225 @@
+# Solution 0.4: docker-compose.yaml for local Airflow development
+# This configuration runs a complete Airflow stack locally
+#
+# ============================================
+# SECURITY WARNING - LOCAL DEVELOPMENT ONLY
+# ============================================
+# This configuration uses hardcoded credentials for convenience.
+# For production deployments:
+# 1. Use environment variables from .env file (see .env.example)
+# 2. Use secrets management (Docker secrets, HashiCorp Vault, etc.)
+# 3. Generate strong, unique passwords
+# 4. Use HTTPS with proper certificates
+#
+# To use .env file:
+# 1. Copy .env.example to .env
+# 2. Update credentials in .env
+# 3. Replace hardcoded values below with ${VARIABLE_NAME}
+# ============================================
+
+# Define reusable x- fragments for common configurations
+x-airflow-common: &airflow-common
+  build:
+    context: .
+    dockerfile: Dockerfile
+  environment: &airflow-env # Database connection (use ${POSTGRES_PASSWORD} in production)
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+    # Use LocalExecutor for simple local development
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    # Don't load example DAGs
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    # Secret key for webserver sessions
+    # WARNING: Change this in production! Use: python -c "import secrets; print(secrets.token_hex(32))"
+    AIRFLOW__WEBSERVER__SECRET_KEY: "local-dev-secret-key-change-in-production"
+    # Disable loading default connections
+    AIRFLOW__CORE__LOAD_DEFAULT_CONNECTIONS: "false"
+    # Set the DAGs folder
+    AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+  # Security hardening
+  security_opt:
+    - no-new-privileges:true
+  # Limit container capabilities (uncomment for stricter security)
+  # cap_drop:
+  #   - ALL
+  networks:
+    - airflow-backend
+
+services:
+  # PostgreSQL database for Airflow metadata
+  postgres:
+    image: postgres:16-alpine
+    container_name: airflow-postgres
+    environment:
+      # WARNING: Change these credentials for production!
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow # Use ${POSTGRES_PASSWORD} in production
+      POSTGRES_DB: airflow
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+    # Resource limits (adjust based on your system)
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "0.5"
+        reservations:
+          memory: 256M
+    networks:
+      - airflow-backend
+
+  # Initialize the Airflow database and create admin user
+  airflow-init:
+    <<: *airflow-common
+    container_name: airflow-init
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # WARNING: Change admin credentials for production!
+    command: >
+      bash -c "
+        echo 'Initializing Airflow database...' &&
+        airflow db migrate &&
+        echo 'Creating admin user...' &&
+        airflow users create \
+          --username admin \
+          --password admin \
+          --firstname Admin \
+          --lastname User \
+          --role Admin \
+          --email admin@example.com || true &&
+        echo 'Initialization complete!'
+      "
+
+  # Airflow API Server (serves both UI and REST API)
+  airflow-webserver:
+    <<: *airflow-common
+    container_name: airflow-webserver
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+    ports:
+      - "8080:8080"
+    volumes:
+      # Mount local DAGs for development (optional, remove for production)
+      - ./dags:/opt/airflow/dags:ro
+      - ./plugins:/opt/airflow/plugins:ro
+      - airflow_logs:/opt/airflow/logs
+    command: airflow api-server --port 8080
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "1.0"
+        reservations:
+          memory: 512M
+    networks:
+      - airflow-frontend
+      - airflow-backend
+
+  # Airflow Scheduler
+  airflow-scheduler:
+    <<: *airflow-common
+    container_name: airflow-scheduler
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+    volumes:
+      # Mount local DAGs for development (optional, remove for production)
+      - ./dags:/opt/airflow/dags:ro
+      - ./plugins:/opt/airflow/plugins:ro
+      - airflow_logs:/opt/airflow/logs
+    command: airflow scheduler
+    healthcheck:
+      test: ["CMD-SHELL", "airflow jobs check --job-type SchedulerJob --hostname $(hostname)"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "1.0"
+        reservations:
+          memory: 512M
+
+  # Airflow Triggerer (for deferrable operators)
+  airflow-triggerer:
+    <<: *airflow-common
+    container_name: airflow-triggerer
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+    volumes:
+      - airflow_logs:/opt/airflow/logs
+    command: airflow triggerer
+    healthcheck:
+      test: ["CMD-SHELL", "airflow jobs check --job-type TriggererJob --hostname $(hostname)"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "0.5"
+        reservations:
+          memory: 256M
+
+# Named volumes for data persistence
+volumes:
+  postgres_data:
+    name: airflow-postgres-data
+  airflow_logs:
+    name: airflow-logs
+
+# Network segmentation for security
+networks:
+  airflow-frontend:
+    name: airflow-frontend
+    driver: bridge
+  airflow-backend:
+    name: airflow-backend
+    driver: bridge
+    internal: true # No external access to backend network
+
+
+# Usage:
+# Start:   docker compose up -d
+# Logs:    docker compose logs -f
+# Stop:    docker compose down
+# Reset:   docker compose down -v (removes database)
+#
+# Access UI: http://localhost:8080
+# Login: admin / admin (CHANGE IN PRODUCTION!)
+#
+# Production Checklist:
+# [ ] Replace hardcoded passwords with environment variables
+# [ ] Generate unique AIRFLOW__WEBSERVER__SECRET_KEY
+# [ ] Enable HTTPS/TLS
+# [ ] Review and adjust resource limits
+# [ ] Enable cap_drop: ALL if compatible with your workloads
+# [ ] Configure external database (not containerized)
+# [ ] Set up proper backup strategy
