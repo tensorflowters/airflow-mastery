@@ -1,0 +1,198 @@
+# Airflow Mastery Documentation
+# https://squidfunk.github.io/mkdocs-material/
+
+site_name: Airflow Mastery
+site_description: Complete Apache Airflow 3.x Curriculum - From Beginner to Production
+site_author: Airflow Mastery Team
+site_url: https://YOUR_ORG.github.io/airflow-mastery
+
+repo_url: https://github.com/YOUR_ORG/airflow-mastery
+repo_name: YOUR_ORG/airflow-mastery
+edit_uri: edit/main/
+
+# ============================================
+# Theme Configuration
+# ============================================
+
+theme:
+  name: material
+  language: en
+
+  palette:
+    # Light mode
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+  font:
+    text: Inter
+    code: JetBrains Mono
+
+  icon:
+    repo: fontawesome/brands/github
+    logo: material/airplane
+
+  features:
+    # Navigation
+    - navigation.instant
+    - navigation.instant.prefetch
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.path
+    - navigation.top
+    - navigation.footer
+
+    # Search
+    - search.suggest
+    - search.highlight
+    - search.share
+
+    # Content
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - content.tooltips
+
+    # Table of contents
+    - toc.follow
+
+# ============================================
+# Plugins
+# ============================================
+
+plugins:
+  - search:
+      separator: '[\s\-,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
+  - awesome-pages:
+      collapse_single_pages: true
+  - minify:
+      minify_html: true
+
+# ============================================
+# Markdown Extensions
+# ============================================
+
+markdown_extensions:
+  # Python Markdown
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      toc_depth: 3
+
+  # PyMdown Extensions
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.magiclink:
+      normalize_issue_symbols: true
+      repo_url_shorthand: true
+      user: YOUR_ORG
+      repo: airflow-mastery
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.snippets:
+      base_path: docs
+      auto_append:
+        - includes/abbreviations.md
+      check_paths: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+      combine_header_slug: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+# ============================================
+# Navigation
+# ============================================
+
+nav:
+  - Home: index.md
+
+  - Getting Started:
+      - Quickstart: getting-started/quickstart.md
+      - Manual Setup: getting-started/manual-setup.md
+      - Troubleshooting: getting-started/troubleshooting.md
+
+  - Curriculum:
+      - Overview: modules/README.md
+      - "Module 00: Environment Setup":
+          - Overview: modules/00-environment-setup/README.md
+          - Exercises:
+              - "0.1: Project Init": modules/00-environment-setup/exercises/exercise_0_1.md
+              - "0.2: pyproject.toml": modules/00-environment-setup/exercises/exercise_0_2.md
+              - "0.3: Code Quality": modules/00-environment-setup/exercises/exercise_0_3.md
+              - "0.4: Docker Build": modules/00-environment-setup/exercises/exercise_0_4.md
+              - "0.5: Testing": modules/00-environment-setup/exercises/exercise_0_5.md
+    # Additional modules will be added as they're created
+
+  - Case Studies:
+      - Overview: case-studies/README.md
+      - Spotify Recommendations: case-studies/spotify-recommendations.md
+      - Stripe Fraud Detection: case-studies/stripe-fraud-detection.md
+      - Airbnb Experimentation: case-studies/airbnb-experimentation.md
+      - Modern RAG Architecture: case-studies/modern-rag-architecture.md
+
+  - Reference:
+      - External Resources: references.md
+      - Airflow 3.x K8s Guide: airflow3-k8s-guide.md
+
+  - Contributing: CONTRIBUTING.md
+
+# ============================================
+# Extra Configuration
+# ============================================
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/YOUR_ORG/airflow-mastery
+      name: GitHub Repository
+
+  generator: false # Hide "Made with Material for MkDocs"
+
+  analytics:
+    provider: google
+    property: G-XXXXXXXXXX # Replace with your GA4 property
+
+extra_css:
+  - stylesheets/extra.css
+
+# Copyright
+copyright: Copyright &copy; 2024-2026 Airflow Mastery Team

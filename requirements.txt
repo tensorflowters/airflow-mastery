@@ -1,0 +1,30 @@
+# Airflow Mastery - Learning Project
+
+# Core Airflow
+apache-airflow==3.1.5
+apache-airflow-providers-standard>=1.0.0
+
+# For Kubernetes deployment
+apache-airflow-providers-cncf-kubernetes>=8.0.0
+
+# Common integrations (uncomment as needed)
+# apache-airflow-providers-postgres>=5.0.0
+# apache-airflow-providers-amazon>=8.0.0
+# apache-airflow-providers-google>=10.0.0
+
+# Development & Testing
+pytest>=7.0.0
+pytest-cov>=4.0.0
+ruff>=0.1.0
+
+# Fernet key generation
+cryptography>=41.0.0
+
+# HTTP requests (for API examples)
+requests>=2.31.0
+
+# Data processing examples
+pandas>=2.0.0
+
+# Timezone handling
+pendulum>=3.0.0

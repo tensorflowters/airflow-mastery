@@ -1,0 +1,141 @@
+# Default Pod Template for Airflow KubernetesExecutor
+#
+# This template defines the default configuration for task pods.
+# All tasks inherit from this template unless overridden via executor_config.
+#
+# Usage:
+# Reference this template in Helm values.yaml:
+#   airflowPodAnnotations:
+#     ...
+#   podTemplate: |
+#     <contents of this file>
+#
+# Or use as a ConfigMap:
+#   kubectl create configmap airflow-pod-template \
+#     --from-file=pod-template.yaml=default-pod.yaml \
+#     -n airflow
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: airflow-worker
+  labels:
+    app: airflow-worker
+    component: task
+  annotations:
+    # Allow cluster autoscaler to evict task pods
+    cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
+spec:
+  # Service account for task execution
+  # Create a dedicated service account with minimal permissions
+  serviceAccountName: airflow-worker
+
+  # Restart policy must be Never for Airflow tasks
+  restartPolicy: Never
+
+  # Security context for the pod
+  securityContext:
+    runAsUser: 50000       # airflow user
+    runAsGroup: 0          # root group (for volume permissions)
+    fsGroup: 0             # root group for file system
+    runAsNonRoot: true     # Enforce non-root execution
+
+  # DNS configuration
+  dnsPolicy: ClusterFirst
+
+  # Termination grace period (time to complete before forced kill)
+  terminationGracePeriodSeconds: 600  # 10 minutes
+
+  # Priority class for task scheduling
+  # priorityClassName: airflow-task-priority
+
+  containers:
+    - name: base
+      # Image will be overridden by Airflow
+      image: apache/airflow:3.1.5
+      imagePullPolicy: IfNotPresent
+
+      # Default resource allocation
+      # Suitable for typical Python tasks
+      resources:
+        requests:
+          cpu: "250m"      # 0.25 CPU cores
+          memory: "256Mi"  # 256 MB RAM
+        limits:
+          cpu: "1"         # 1 CPU core max
+          memory: "1Gi"    # 1 GB RAM max
+
+      # Environment variables for all tasks
+      env:
+        # Executor inside the pod is Local (single task)
+        - name: AIRFLOW__CORE__EXECUTOR
+          value: "LocalExecutor"
+        # Disable colored logs for cleaner output
+        - name: AIRFLOW__LOGGING__COLORED_CONSOLE_LOG
+          value: "False"
+        # Pod information via Downward API
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+
+      # Volume mounts
+      volumeMounts:
+        # DAG files (read-only)
+        - name: dags
+          mountPath: /opt/airflow/dags
+          readOnly: true
+        # Log files (writable)
+        - name: logs
+          mountPath: /opt/airflow/logs
+        # Temporary storage for task data
+        - name: tmp
+          mountPath: /tmp
+
+      # Liveness probe (detect stuck tasks)
+      # Disabled by default - tasks should run to completion
+      # livenessProbe:
+      #   exec:
+      #     command:
+      #       - sh
+      #       - -c
+      #       - "pgrep -f 'airflow task' || exit 1"
+      #   initialDelaySeconds: 30
+      #   periodSeconds: 60
+
+  # Volumes
+  volumes:
+    # DAG volume - git-sync or PVC
+    - name: dags
+      emptyDir: {}
+    # Log volume - local or remote
+    - name: logs
+      emptyDir: {}
+    # Temporary storage
+    - name: tmp
+      emptyDir:
+        sizeLimit: 2Gi
+
+  # Node affinity and tolerations
+  # Uncomment to schedule tasks on specific nodes
+  # affinity:
+  #   nodeAffinity:
+  #     preferredDuringSchedulingIgnoredDuringExecution:
+  #       - weight: 100
+  #         preference:
+  #           matchExpressions:
+  #             - key: workload-type
+  #               operator: In
+  #               values:
+  #                 - airflow-task
+
+  # Tolerations for tainted nodes
+  # tolerations:
+  #   - key: "airflow"
+  #     operator: "Equal"
+  #     value: "task"
+  #     effect: "NoSchedule"

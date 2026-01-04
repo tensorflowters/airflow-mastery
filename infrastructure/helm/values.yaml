@@ -1,0 +1,170 @@
+# =============================================================================
+# Airflow 3 Helm Chart - Development Values
+# =============================================================================
+#
+# ⚠️  DEVELOPMENT ONLY - NOT FOR PRODUCTION USE ⚠️
+#
+# This file contains INSECURE defaults suitable only for local development.
+# For production deployments, use: values-production.yaml
+#
+# Key security issues in this file:
+# - Hardcoded database credentials (airflow:airflow)
+# - Embedded PostgreSQL (not HA, no backups)
+# - Single replicas (no high availability)
+# - No TLS/HTTPS configuration
+# - No RBAC configuration
+#
+# For use with: helm upgrade --install airflow apache-airflow/airflow -f values.yaml
+
+# =============================================================================
+# EXECUTOR CONFIGURATION
+# =============================================================================
+executor: KubernetesExecutor
+
+# Use consistent naming for resources
+useStandardNaming: true
+
+# Airflow version
+defaultAirflowTag: "3.1.5"
+airflowVersion: "3.1.5"
+
+# =============================================================================
+# DATABASE CONFIGURATION
+# =============================================================================
+# For production: use external PostgreSQL
+# For development: embedded PostgreSQL is fine
+
+postgresql:
+  enabled: true  # Set to false for external DB
+  auth:
+    username: airflow
+    password: airflow
+    database: airflow
+
+# External database (uncomment when postgresql.enabled: false)
+# data:
+#   metadataSecretName: airflow-database-secret
+
+# Connection pooling (recommended for production)
+pgbouncer:
+  enabled: false  # Enable for production with external DB
+  maxClientConn: 100
+  metadataPoolSize: 10
+
+# =============================================================================
+# WEBSERVER / API SERVER
+# =============================================================================
+webserver:
+  replicas: 1  # Increase to 2+ for production HA
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "512Mi"
+    limits:
+      cpu: "1"
+      memory: "2Gi"
+  
+  service:
+    type: ClusterIP  # Use LoadBalancer or Ingress for production
+
+# Secret key for session management
+webserverSecretKeySecretName: airflow-webserver-secret
+
+# =============================================================================
+# SCHEDULER
+# =============================================================================
+scheduler:
+  replicas: 1  # Increase to 2 for HA
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      cpu: "2"
+      memory: "4Gi"
+
+# =============================================================================
+# DAG PROCESSOR
+# =============================================================================
+dagProcessor:
+  enabled: true
+  replicas: 1
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "512Mi"
+
+# =============================================================================
+# DAG CONFIGURATION
+# =============================================================================
+dags:
+  # Option 1: Git-sync (recommended for development)
+  gitSync:
+    enabled: false  # Enable and configure for git-sync
+    # repo: git@github.com:your-org/airflow-dags.git
+    # branch: main
+    # subPath: "dags"
+    # sshKeySecret: airflow-ssh-secret
+    # wait: 60
+
+  # Option 2: Mount from host (for local development only)
+  persistence:
+    enabled: false
+
+# =============================================================================
+# LOGS
+# =============================================================================
+logs:
+  persistence:
+    enabled: true
+    size: 10Gi
+
+# For production, configure remote logging:
+# config:
+#   logging:
+#     remote_logging: 'True'
+#     remote_base_log_folder: 's3://your-bucket/airflow-logs'
+#     remote_log_conn_id: 'aws_default'
+
+# =============================================================================
+# KUBERNETES EXECUTOR SETTINGS
+# =============================================================================
+# Pod template for worker pods
+workers:
+  persistence:
+    enabled: false  # KubernetesExecutor doesn't need persistent workers
+
+# =============================================================================
+# AIRFLOW CONFIGURATION OVERRIDES
+# =============================================================================
+config:
+  core:
+    load_examples: 'False'
+    dags_are_paused_at_creation: 'True'
+    default_timezone: 'UTC'
+  
+  scheduler:
+    dag_dir_list_interval: 30
+    min_file_process_interval: 30
+  
+  kubernetes:
+    delete_worker_pods: 'True'
+    delete_worker_pods_on_failure: 'False'
+
+# =============================================================================
+# SECURITY
+# =============================================================================
+# Create admin user on first deploy
+createUserJob:
+  useHelmHooks: true
+  applyCustomEnv: true
+
+# =============================================================================
+# EXTRA ENVIRONMENT VARIABLES
+# =============================================================================
+env: []
+# - name: AIRFLOW__CORE__FERNET_KEY
+#   valueFrom:
+#     secretKeyRef:
+#       name: airflow-fernet-key
+#       key: fernet-key

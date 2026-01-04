@@ -1,0 +1,184 @@
+# High Memory Pod Template for Airflow KubernetesExecutor
+#
+# Use this template for memory-intensive tasks such as:
+# - Large data transformations
+# - ML model training
+# - Batch processing
+# - Data aggregations
+#
+# Usage in DAG:
+#   from kubernetes.client import models as k8s
+#
+#   # Load pod template from file or define inline
+#   @task(executor_config={
+#       "pod_template_file": "/path/to/high-memory-pod.yaml"
+#   })
+#   def memory_intensive_task():
+#       ...
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: airflow-worker-high-memory
+  labels:
+    app: airflow-worker
+    component: task
+    workload-type: high-memory
+  annotations:
+    # Prevent cluster autoscaler from evicting during processing
+    cluster-autoscaler.kubernetes.io/safe-to-evict: "false"
+    # Custom annotations for monitoring
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9090"
+spec:
+  serviceAccountName: airflow-worker
+  restartPolicy: Never
+
+  securityContext:
+    runAsUser: 50000
+    runAsGroup: 0
+    fsGroup: 0
+    runAsNonRoot: true
+
+  # Longer termination grace period for large tasks
+  terminationGracePeriodSeconds: 1800  # 30 minutes
+
+  # Higher priority for memory-intensive tasks
+  # priorityClassName: airflow-high-priority
+
+  containers:
+    - name: base
+      image: apache/airflow:3.1.5
+      imagePullPolicy: IfNotPresent
+
+      # High memory configuration
+      resources:
+        requests:
+          cpu: "2"         # 2 CPU cores
+          memory: "4Gi"    # 4 GB RAM
+          ephemeral-storage: "10Gi"  # 10 GB temp storage
+        limits:
+          cpu: "4"         # 4 CPU cores max
+          memory: "8Gi"    # 8 GB RAM max
+          ephemeral-storage: "20Gi"  # 20 GB temp storage max
+
+      env:
+        - name: AIRFLOW__CORE__EXECUTOR
+          value: "LocalExecutor"
+        - name: AIRFLOW__LOGGING__COLORED_CONSOLE_LOG
+          value: "False"
+        # Python memory optimization
+        - name: PYTHONUNBUFFERED
+          value: "1"
+        - name: PYTHONHASHSEED
+          value: "random"
+        # Increase Python garbage collection threshold
+        - name: PYTHONGC
+          value: "1"
+        # Pod metadata
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: POD_MEMORY_LIMIT
+          valueFrom:
+            resourceFieldRef:
+              containerName: base
+              resource: limits.memory
+
+      volumeMounts:
+        - name: dags
+          mountPath: /opt/airflow/dags
+          readOnly: true
+        - name: logs
+          mountPath: /opt/airflow/logs
+        - name: tmp
+          mountPath: /tmp
+        # Additional scratch space for large files
+        - name: scratch
+          mountPath: /scratch
+
+  volumes:
+    - name: dags
+      emptyDir: {}
+    - name: logs
+      emptyDir: {}
+    - name: tmp
+      emptyDir:
+        sizeLimit: 5Gi
+    # Large scratch volume for intermediate data
+    - name: scratch
+      emptyDir:
+        sizeLimit: 50Gi
+
+  # Schedule on nodes with sufficient memory
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: node.kubernetes.io/instance-type
+                operator: In
+                values:
+                  - m5.xlarge    # AWS
+                  - m5.2xlarge
+                  - n2-standard-8  # GCP
+                  - n2-highmem-4
+                  - Standard_D8s_v3  # Azure
+
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          preference:
+            matchExpressions:
+              - key: workload-type
+                operator: In
+                values:
+                  - memory-optimized
+                  - compute
+
+  # Tolerate dedicated workload nodes
+  tolerations:
+    - key: "dedicated"
+      operator: "Equal"
+      value: "airflow-compute"
+      effect: "NoSchedule"
+    - key: "workload"
+      operator: "Equal"
+      value: "high-memory"
+      effect: "NoSchedule"
+
+---
+# Alternative: GPU-enabled pod template
+# Uncomment and use for ML inference tasks
+
+# apiVersion: v1
+# kind: Pod
+# metadata:
+#   name: airflow-worker-gpu
+#   labels:
+#     app: airflow-worker
+#     workload-type: gpu
+# spec:
+#   serviceAccountName: airflow-worker
+#   restartPolicy: Never
+#
+#   containers:
+#     - name: base
+#       image: apache/airflow:3.1.5-cuda
+#       resources:
+#         limits:
+#           cpu: "4"
+#           memory: "16Gi"
+#           nvidia.com/gpu: "1"
+#
+#   nodeSelector:
+#     accelerator: nvidia-tesla-t4
+#
+#   tolerations:
+#     - key: "nvidia.com/gpu"
+#       operator: "Exists"
+#       effect: "NoSchedule"

@@ -1,0 +1,68 @@
+# Ignore Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env
+
+# IDE settings
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Airflow generated files
+airflow.db
+airflow.cfg
+webserver_config.py
+logs/
+*.log
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Playground folder (your experimentation space)
+dags/playground/*
+!dags/playground/.gitkeep
+
+# Local environment files
+.env.local
+*.local
+
+# Infrastructure environment files (NEVER commit credentials!)
+infrastructure/docker-compose/.env
+infrastructure/**/.env
+
+# Temporary files
+tmp/
+*.tmp
+
+# MkDocs build output
+site/
+
+# Serena MCP cache
+.serena/
+
+# Claude docs (internal analysis)
+claudedocs/
+
+# Kubernetes secrets (never commit!)
+*secret*.yaml
+*secrets*.yaml

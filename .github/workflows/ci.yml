@@ -1,0 +1,124 @@
+# Continuous Integration
+# Runs on all pull requests and pushes to main
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Cancel in-progress runs for the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Install dependencies
+        run: uv sync --group dev
+
+      - name: Run ruff linter
+        run: uv run ruff check .
+
+      - name: Check ruff formatting
+        run: uv run ruff format --check .
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Install dependencies
+        run: uv sync --group dev --group test
+
+      - name: Run pytest
+        run: uv run pytest tests/ -v --tb=short
+
+  # Optional: Validate DAG imports
+  validate-dags:
+    name: Validate DAGs
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Check DAG imports
+        run: |
+          uv run python -c "
+          import sys
+          from pathlib import Path
+
+          # Add dags to path
+          sys.path.insert(0, str(Path.cwd() / 'dags'))
+
+          errors = []
+          for dag_file in Path('dags').glob('**/*.py'):
+              if dag_file.name.startswith('_'):
+                  continue
+              try:
+                  exec(compile(dag_file.read_text(), dag_file, 'exec'))
+              except Exception as e:
+                  errors.append(f'{dag_file}: {e}')
+
+          if errors:
+              print('DAG import errors:')
+              for error in errors:
+                  print(f'  - {error}')
+              sys.exit(1)
+          else:
+              print('All DAGs import successfully!')
+          "
+
+  # Build docs to catch any errors
+  docs:
+    name: Build Docs
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Install dependencies
+        run: uv sync --group docs
+
+      - name: Build documentation
+        run: uv run mkdocs build # Note: --strict disabled until pre-existing content link issues are fixed

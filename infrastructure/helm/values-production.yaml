@@ -1,0 +1,402 @@
+# =============================================================================
+# Airflow 3 Helm Chart - Production Values
+# =============================================================================
+#
+# This file contains production-ready configurations for Apache Airflow.
+# Use with: helm upgrade --install airflow apache-airflow/airflow -f values-production.yaml
+#
+# PREREQUISITES:
+# 1. External PostgreSQL database (RDS, Cloud SQL, Azure Database)
+# 2. Kubernetes secrets created (see SECRETS section below)
+# 3. Ingress controller installed (nginx-ingress or similar)
+# 4. TLS certificates configured
+# 5. External log storage (S3, GCS, Azure Blob)
+#
+# =============================================================================
+
+# =============================================================================
+# EXECUTOR CONFIGURATION
+# =============================================================================
+executor: KubernetesExecutor
+
+# Consistent naming for resources
+useStandardNaming: true
+
+# Airflow version
+defaultAirflowTag: "3.1.5"
+airflowVersion: "3.1.5"
+
+# =============================================================================
+# DATABASE CONFIGURATION - EXTERNAL POSTGRESQL
+# =============================================================================
+# IMPORTANT: Disable embedded PostgreSQL for production
+
+postgresql:
+  enabled: false  # Use external database
+
+# External database connection via secret
+data:
+  metadataSecretName: airflow-database-secret
+  # Secret must contain key: connection
+  # Format: postgresql+psycopg2://<user>:<password>@<host>:<port>/<database>
+
+# Connection pooling (highly recommended for production)
+pgbouncer:
+  enabled: true
+  maxClientConn: 100
+  metadataPoolSize: 10
+  resultBackendPoolSize: 5
+
+# =============================================================================
+# SECURITY - SECRETS CONFIGURATION
+# =============================================================================
+# Create these secrets BEFORE deploying:
+#
+# 1. Database connection:
+#    kubectl create secret generic airflow-database-secret \
+#      --from-literal=connection='postgresql+psycopg2://user:pass@host:5432/airflow' \
+#      -n airflow
+#
+# 2. Fernet key (for encrypting connections/variables):
+#    FERNET_KEY=$(python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
+#    kubectl create secret generic airflow-fernet-key \
+#      --from-literal=fernet-key="$FERNET_KEY" \
+#      -n airflow
+#
+# 3. Webserver secret key:
+#    SECRET_KEY=$(python3 -c "import secrets; print(secrets.token_hex(32))")
+#    kubectl create secret generic airflow-webserver-secret \
+#      --from-literal=webserver-secret-key="$SECRET_KEY" \
+#      -n airflow
+#
+# =============================================================================
+
+# Fernet key for encryption
+fernetKeySecretName: airflow-fernet-key
+
+# Webserver session secret
+webserverSecretKeySecretName: airflow-webserver-secret
+
+# =============================================================================
+# WEBSERVER / API SERVER - HIGH AVAILABILITY
+# =============================================================================
+webserver:
+  replicas: 2  # HA configuration
+
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      cpu: "2"
+      memory: "4Gi"
+
+  # Pod disruption budget for rolling updates
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+
+  # Anti-affinity to spread across nodes
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchLabels:
+                component: webserver
+            topologyKey: kubernetes.io/hostname
+
+  service:
+    type: ClusterIP  # Use Ingress for external access
+
+# =============================================================================
+# INGRESS - EXTERNAL ACCESS WITH TLS
+# =============================================================================
+ingress:
+  enabled: true
+
+  # Ingress class (adjust for your cluster)
+  ingressClassName: nginx
+
+  # Annotations for nginx-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    # Enable if using cert-manager
+    # cert-manager.io/cluster-issuer: "letsencrypt-prod"
+
+  # Host configuration
+  hosts:
+    - name: airflow.example.com  # CHANGE THIS
+      tls:
+        enabled: true
+        secretName: airflow-tls-secret
+
+  # Path configuration
+  path: /
+  pathType: Prefix
+
+# =============================================================================
+# SCHEDULER - HIGH AVAILABILITY
+# =============================================================================
+scheduler:
+  replicas: 2  # HA with multiple active schedulers (Airflow 3 feature)
+
+  resources:
+    requests:
+      cpu: "1"
+      memory: "2Gi"
+    limits:
+      cpu: "4"
+      memory: "8Gi"
+
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchLabels:
+                component: scheduler
+            topologyKey: kubernetes.io/hostname
+
+# =============================================================================
+# DAG PROCESSOR
+# =============================================================================
+dagProcessor:
+  enabled: true
+  replicas: 1
+
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      cpu: "2"
+      memory: "4Gi"
+
+# =============================================================================
+# DAG DEPLOYMENT - GIT SYNC
+# =============================================================================
+dags:
+  gitSync:
+    enabled: true
+
+    # Git repository (use SSH for private repos)
+    repo: git@github.com:your-org/airflow-dags.git  # CHANGE THIS
+    branch: main
+    subPath: "dags"
+
+    # SSH key secret for private repositories
+    sshKeySecret: airflow-git-ssh-secret
+
+    # Sync interval in seconds
+    wait: 60
+
+    # Resource limits for git-sync sidecar
+    resources:
+      requests:
+        cpu: "50m"
+        memory: "64Mi"
+      limits:
+        cpu: "100m"
+        memory: "128Mi"
+
+  persistence:
+    enabled: false  # Use git-sync instead
+
+# =============================================================================
+# REMOTE LOGGING - S3/GCS/AZURE
+# =============================================================================
+logs:
+  persistence:
+    enabled: false  # Use remote logging
+
+# Configure remote logging in config section below
+# Uncomment the appropriate provider:
+
+# AWS S3:
+# extraEnv:
+#   - name: AIRFLOW__LOGGING__REMOTE_LOGGING
+#     value: "True"
+#   - name: AIRFLOW__LOGGING__REMOTE_BASE_LOG_FOLDER
+#     value: "s3://your-bucket/airflow-logs"
+#   - name: AIRFLOW__LOGGING__REMOTE_LOG_CONN_ID
+#     value: "aws_default"
+
+# GCS:
+# extraEnv:
+#   - name: AIRFLOW__LOGGING__REMOTE_LOGGING
+#     value: "True"
+#   - name: AIRFLOW__LOGGING__REMOTE_BASE_LOG_FOLDER
+#     value: "gs://your-bucket/airflow-logs"
+#   - name: AIRFLOW__LOGGING__REMOTE_LOG_CONN_ID
+#     value: "google_cloud_default"
+
+# =============================================================================
+# KUBERNETES EXECUTOR SETTINGS
+# =============================================================================
+workers:
+  persistence:
+    enabled: false  # KubernetesExecutor spawns ephemeral pods
+
+# =============================================================================
+# AIRFLOW CONFIGURATION
+# =============================================================================
+config:
+  core:
+    load_examples: 'False'
+    dags_are_paused_at_creation: 'True'
+    default_timezone: 'UTC'
+    # Enable parallelism for production
+    parallelism: 32
+    max_active_runs_per_dag: 16
+    max_active_tasks_per_dag: 16
+
+  scheduler:
+    dag_dir_list_interval: 30
+    min_file_process_interval: 30
+    # Orphaned task handling
+    scheduler_zombie_task_threshold: 300
+
+  kubernetes:
+    delete_worker_pods: 'True'
+    delete_worker_pods_on_failure: 'True'  # Clean up for production
+    # Namespace for worker pods
+    namespace: airflow
+
+  webserver:
+    # Security settings
+    expose_config: 'False'
+    expose_hostname: 'False'
+    expose_stacktrace: 'False'
+    # Session management
+    session_lifetime_minutes: 1440  # 24 hours
+    # RBAC
+    rbac: 'True'
+
+  api:
+    # Enable REST API
+    auth_backends: 'airflow.api.auth.backend.session,airflow.api.auth.backend.basic_auth'
+
+# =============================================================================
+# RBAC AND SERVICE ACCOUNTS
+# =============================================================================
+rbac:
+  create: true
+  createScopedResourcesRole: true
+
+serviceAccount:
+  create: true
+  name: airflow
+  annotations: {}
+  # For AWS IRSA:
+  # annotations:
+  #   eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT:role/airflow-role
+  # For GCP Workload Identity:
+  # annotations:
+  #   iam.gke.io/gcp-service-account: airflow@project.iam.gserviceaccount.com
+
+# =============================================================================
+# INITIAL USER - DISABLE FOR PRODUCTION
+# =============================================================================
+# For production, use LDAP/OAuth/SAML instead of local users
+createUserJob:
+  useHelmHooks: false  # Disable automatic user creation
+  # If enabling, use strong password from secret:
+  # applyCustomEnv: true
+  # extraEnv:
+  #   - name: _AIRFLOW_WWW_USER_PASSWORD
+  #     valueFrom:
+  #       secretKeyRef:
+  #         name: airflow-admin-password
+  #         key: password
+
+# =============================================================================
+# MONITORING - PROMETHEUS METRICS
+# =============================================================================
+statsd:
+  enabled: true
+
+# Enable StatsD exporter for Prometheus
+extraEnv:
+  - name: AIRFLOW__METRICS__STATSD_ON
+    value: "True"
+  - name: AIRFLOW__METRICS__STATSD_HOST
+    value: "localhost"
+  - name: AIRFLOW__METRICS__STATSD_PORT
+    value: "8125"
+  - name: AIRFLOW__METRICS__STATSD_PREFIX
+    value: "airflow"
+
+# =============================================================================
+# POD TEMPLATES FOR KUBERNETES EXECUTOR
+# =============================================================================
+# Reference custom pod templates for different workload types
+# See ../kubernetes/pod-templates/ for examples
+
+# Default pod template
+podTemplate: |
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: airflow-worker
+    labels:
+      app: airflow-worker
+  spec:
+    serviceAccountName: airflow-worker
+    restartPolicy: Never
+    securityContext:
+      runAsUser: 50000
+      runAsNonRoot: true
+    containers:
+      - name: base
+        image: apache/airflow:3.1.5
+        resources:
+          requests:
+            cpu: "250m"
+            memory: "512Mi"
+          limits:
+            cpu: "1"
+            memory: "2Gi"
+
+# =============================================================================
+# EXTRA ENVIRONMENT VARIABLES
+# =============================================================================
+env:
+  - name: AIRFLOW__CORE__FERNET_KEY
+    valueFrom:
+      secretKeyRef:
+        name: airflow-fernet-key
+        key: fernet-key
+
+# =============================================================================
+# PRODUCTION DEPLOYMENT CHECKLIST
+# =============================================================================
+#
+# Pre-deployment:
+# [ ] External PostgreSQL provisioned and accessible
+# [ ] All secrets created (database, fernet, webserver)
+# [ ] TLS certificates configured
+# [ ] Ingress controller installed
+# [ ] Git repository accessible with SSH key
+# [ ] Remote logging storage configured (S3/GCS)
+# [ ] Service accounts and RBAC configured
+#
+# Post-deployment:
+# [ ] Verify all pods running: kubectl get pods -n airflow
+# [ ] Check webserver accessible via Ingress
+# [ ] Verify scheduler processing DAGs
+# [ ] Test a simple DAG execution
+# [ ] Configure monitoring alerts
+# [ ] Set up log aggregation
+# [ ] Document runbook for operations
+#
+# =============================================================================

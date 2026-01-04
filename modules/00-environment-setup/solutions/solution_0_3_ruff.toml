@@ -1,0 +1,87 @@
+# Solution 0.3: Ruff configuration
+# This can be in pyproject.toml under [tool.ruff] or as a separate ruff.toml
+
+# Match Black's default line length
+line-length = 88
+
+# Target Python version
+target-version = "py311"
+
+# Exclude common directories
+exclude = [
+    ".git",
+    ".venv",
+    "__pycache__",
+    "build",
+    "dist",
+    ".ruff_cache",
+    ".pytest_cache",
+    "*.egg-info",
+]
+
+[lint]
+# Enable these rule sets
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # Pyflakes (unused imports, variables, etc.)
+    "I",      # isort (import sorting)
+    "B",      # flake8-bugbear (common bugs and design issues)
+    "C4",     # flake8-comprehensions (better comprehensions)
+    "UP",     # pyupgrade (modern Python syntax)
+    "SIM",    # flake8-simplify (code simplification)
+    "AIR",    # Airflow-specific rules (AIR001, AIR301, AIR302)
+    "RUF",    # Ruff-specific rules
+    "S",      # flake8-bandit (security checks)
+    "PTH",    # flake8-use-pathlib (prefer pathlib over os.path)
+    "T20",    # flake8-print (no print statements in production code)
+]
+
+# Rules to ignore
+ignore = [
+    "E501",   # Line too long (handled by formatter)
+    "B008",   # Do not perform function calls in argument defaults (common in Airflow)
+    "S101",   # Use of assert detected (acceptable in tests)
+    "S104",   # Possible binding to all interfaces (expected in Docker)
+    "S105",   # Possible hardcoded password (handled by detect-secrets)
+    "S106",   # Possible hardcoded password in argument (handled by detect-secrets)
+]
+
+# Allow autofix for all rules
+fixable = ["ALL"]
+unfixable = []
+
+[lint.isort]
+# Your project's first-party packages
+known-first-party = ["dags", "plugins", "tests"]
+# Force single-line imports for cleaner diffs
+force-single-line = false
+# Combine 'from' imports from the same module
+combine-as-imports = true
+
+[lint.per-file-ignores]
+# Ignore unused imports in __init__.py files (common pattern)
+"__init__.py" = ["F401"]
+# Allow print statements and assert in DAGs (for debugging/logging)
+"dags/*.py" = ["T201", "S101"]
+# Allow print statements and assert in tests
+"tests/*.py" = ["T201", "S101"]
+# Allow hardcoded credentials in example/solution files (clearly marked as examples)
+"**/solutions/*.py" = ["S105", "S106"]
+
+[lint.flake8-bandit]
+# Additional security configuration
+check-typed-exception = true
+
+[format]
+# Use double quotes like Black
+quote-style = "double"
+
+# Use spaces for indentation
+indent-style = "space"
+
+# Format docstrings
+docstring-code-format = true
+
+# Line ending (lf for Unix, crlf for Windows)
+line-ending = "lf"

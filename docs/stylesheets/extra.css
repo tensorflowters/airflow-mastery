@@ -1,0 +1,103 @@
+/* Airflow Mastery - Custom Styles */
+
+/* Slightly larger code font for readability */
+.md-typeset code {
+  font-size: 0.85em;
+}
+
+/* Better admonition styling */
+.md-typeset .admonition {
+  margin: 1.5em 0;
+}
+
+/* Exercise styling */
+.md-typeset .admonition.exercise {
+  border-left-color: #7c4dff;
+}
+
+.md-typeset .admonition.exercise > .admonition-title {
+  background-color: rgba(124, 77, 255, 0.1);
+}
+
+.md-typeset .admonition.exercise > .admonition-title::before {
+  background-color: #7c4dff;
+}
+
+/* Solution styling (collapsible) */
+.md-typeset details.solution {
+  border-left-color: #00bfa5;
+}
+
+.md-typeset details.solution > summary {
+  background-color: rgba(0, 191, 165, 0.1);
+}
+
+/* Hero section on landing page */
+.hero {
+  text-align: center;
+  padding: 4rem 2rem;
+}
+
+.hero h1 {
+  font-size: 3rem;
+  font-weight: 700;
+}
+
+.hero p {
+  font-size: 1.25rem;
+  opacity: 0.8;
+}
+
+/* Feature cards */
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+
+.feature-card {
+  padding: 1.5rem;
+  border-radius: 8px;
+  background: var(--md-default-bg-color);
+  border: 1px solid var(--md-default-fg-color--lightest);
+}
+
+.feature-card h3 {
+  margin-top: 0;
+}
+
+/* Terminal-like code blocks */
+.md-typeset pre > code[data-md-type="terminal"]::before {
+  content: "$ ";
+  color: var(--md-default-fg-color--light);
+}
+
+/* Better table styling */
+.md-typeset table:not([class]) {
+  display: table;
+  width: 100%;
+}
+
+/* Quick links on homepage */
+.quick-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: center;
+  margin: 2rem 0;
+}
+
+.quick-links a {
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  background: var(--md-primary-fg-color);
+  color: var(--md-primary-bg-color) !important;
+  font-weight: 600;
+  text-decoration: none !important;
+  transition: opacity 0.2s;
+}
+
+.quick-links a:hover {
+  opacity: 0.9;
+}
