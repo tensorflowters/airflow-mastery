@@ -160,7 +160,110 @@ nav:
               - "0.3: Code Quality": modules/00-environment-setup/exercises/exercise_0_3.md
               - "0.4: Docker Build": modules/00-environment-setup/exercises/exercise_0_4.md
               - "0.5: Testing": modules/00-environment-setup/exercises/exercise_0_5.md
-    # Additional modules will be added as they're created
+      - "Module 01: Foundations":
+          - Overview: modules/01-foundations/README.md
+          - Exercises:
+              - "1.1: Hello World DAG": modules/01-foundations/exercises/exercise_1_1.md
+              - "1.3: Sequential Dependencies": modules/01-foundations/exercises/exercise_1_3.md
+      - "Module 02: TaskFlow API":
+          - Overview: modules/02-taskflow-api/README.md
+          - Exercises:
+              - "2.1: ETL Pipeline": modules/02-taskflow-api/exercises/exercise_2_1_etl_pipeline.md
+              - "2.2: Context Usage": modules/02-taskflow-api/exercises/exercise_2_2_context_usage.md
+              - "2.3: Mixed Operators": modules/02-taskflow-api/exercises/exercise_2_3_mixed_operators.md
+              - "2.4: LLM-Powered ETL": modules/02-taskflow-api/exercises/exercise_2_4_llm_etl.md
+      - "Module 03: Operators & Hooks":
+          - Overview: modules/03-operators-hooks/README.md
+          - Exercises:
+              - "3.1: Operator Exploration": modules/03-operators-hooks/exercises/exercise_3_1_operator_exploration.md
+              - "3.2: Custom Operator": modules/03-operators-hooks/exercises/exercise_3_2_custom_operator.md
+              - "3.3: Hook Usage": modules/03-operators-hooks/exercises/exercise_3_3_hook_usage.md
+      - "Module 04: Scheduling & Triggers":
+          - Overview: modules/04-scheduling-triggers/README.md
+          - Exercises:
+              - "4.1: Schedule Interpretation": modules/04-scheduling-triggers/exercises/exercise_4_1_schedule_interpretation.md
+              - "4.2: Trigger Rules": modules/04-scheduling-triggers/exercises/exercise_4_2_trigger_rules.md
+              - "4.3: Parameterized DAG": modules/04-scheduling-triggers/exercises/exercise_4_3_parameterized_dag.md
+      - "Module 05: Assets & Data-Aware":
+          - Overview: modules/05-assets-data-aware/README.md
+          - Exercises:
+              - "5.1: Producer/Consumer": modules/05-assets-data-aware/exercises/exercise_5_1_producer_consumer.md
+              - "5.2: Multi-Asset Dependencies": modules/05-assets-data-aware/exercises/exercise_5_2_multi_asset.md
+              - "5.3: @asset Decorator": modules/05-assets-data-aware/exercises/exercise_5_3_asset_decorator.md
+              - "5.4: Embedding Assets": modules/05-assets-data-aware/exercises/exercise_5_4_embedding_assets.md
+      - "Module 06: Dynamic Task Mapping":
+          - Overview: modules/06-dynamic-tasks/README.md
+          - Exercises:
+              - "6.1: Basic Mapping": modules/06-dynamic-tasks/exercises/exercise_6_1_basic_mapping.md
+              - "6.2: File Processing": modules/06-dynamic-tasks/exercises/exercise_6_2_file_processing.md
+              - "6.3: Cross-Product": modules/06-dynamic-tasks/exercises/exercise_6_3_cross_product.md
+              - "6.4: Parallel Embeddings": modules/06-dynamic-tasks/exercises/exercise_6_4_parallel_embeddings.md
+      - "Module 07: Testing & Debugging":
+          - Overview: modules/07-testing-debugging/README.md
+          - Exercises:
+              - "7.1: DAG Integrity Tests": modules/07-testing-debugging/exercises/exercise_7_1_integrity_tests.md
+              - "7.2: Unit Testing": modules/07-testing-debugging/exercises/exercise_7_2_unit_testing.md
+              - "7.3: Debug Broken DAG": modules/07-testing-debugging/exercises/exercise_7_3_debugging.md
+      - "Module 08: Kubernetes Executor":
+          - Overview: modules/08-kubernetes-executor/README.md
+          - Exercises:
+              - "8.1: Local K8s Deployment": modules/08-kubernetes-executor/exercises/exercise_8_1_local_deployment.md
+              - "8.2: Pod Templates": modules/08-kubernetes-executor/exercises/exercise_8_2_pod_templates.md
+              - "8.3: Production Checklist": modules/08-kubernetes-executor/exercises/exercise_8_3_production_checklist.md
+      - "Module 09: Production Patterns":
+          - Overview: modules/09-production-patterns/README.md
+          - Exercises:
+              - "9.1: Production-Ready DAG": modules/09-production-patterns/exercises/exercise_9_1_production_dag.md
+              - "9.2: CI/CD Pipeline": modules/09-production-patterns/exercises/exercise_9_2_cicd_pipeline.md
+              - "9.3: Monitoring Dashboard": modules/09-production-patterns/exercises/exercise_9_3_monitoring.md
+              - "9.4: LLM Retry Patterns": modules/09-production-patterns/exercises/exercise_9_4_llm_retry_patterns.md
+      - "Module 10: Advanced Topics":
+          - Overview: modules/10-advanced-topics/README.md
+          - Exercises:
+              - "10.1: REST API Automation": modules/10-advanced-topics/exercises/exercise_10_1_api_automation.md
+              - "10.2: Custom Timetable": modules/10-advanced-topics/exercises/exercise_10_2_custom_timetable.md
+              - "10.3: Plugin Development": modules/10-advanced-topics/exercises/exercise_10_3_plugin_development.md
+      - "Module 11: Sensors & Deferrable":
+          - Overview: modules/11-sensors-deferrable/README.md
+          - Exercises:
+              - "11.1: Sensor Modes": modules/11-sensors-deferrable/exercises/exercise_11_1_sensor_modes.md
+              - "11.2: Deferrable Conversion": modules/11-sensors-deferrable/exercises/exercise_11_2_deferrable_conversion.md
+              - "11.3: Custom Trigger": modules/11-sensors-deferrable/exercises/exercise_11_3_custom_trigger.md
+              - "11.4: Vector Store Sensor": modules/11-sensors-deferrable/exercises/exercise_11_4_vector_store_sensor.md
+      - "Module 12: REST API":
+          - Overview: modules/12-rest-api/README.md
+          - Exercises:
+              - "12.1: API Basics": modules/12-rest-api/exercises/exercise_12_1_api_basics.md
+              - "12.2: DAG Management": modules/12-rest-api/exercises/exercise_12_2_dag_management.md
+              - "12.3: Automation Script": modules/12-rest-api/exercises/exercise_12_3_automation_script.md
+      - "Module 13: Connections & Secrets":
+          - Overview: modules/13-connections-secrets/README.md
+          - Exercises:
+              - "13.1: Connection Types": modules/13-connections-secrets/exercises/exercise_13_1_connection_types.md
+              - "13.2: Secrets Backends": modules/13-connections-secrets/exercises/exercise_13_2_secrets_backends.md
+              - "13.3: Variable Patterns": modules/13-connections-secrets/exercises/exercise_13_3_variable_patterns.md
+      - "Module 14: Resource Management":
+          - Overview: modules/14-resource-management/README.md
+          - Exercises:
+              - "14.1: Pool Configuration": modules/14-resource-management/exercises/exercise_14_1_pool_configuration.md
+              - "14.2: Priority Weights": modules/14-resource-management/exercises/exercise_14_2_priority_weights.md
+              - "14.3: Concurrency Limits": modules/14-resource-management/exercises/exercise_14_3_concurrency_limits.md
+      - "Module 15: AI/ML Orchestration":
+          - Overview: modules/15-ai-ml-orchestration/README.md
+          - Exercises:
+              - "15.1: RAG Pipeline": modules/15-ai-ml-orchestration/exercises/exercise_15_1_rag_pipeline.md
+              - "15.2: LLM Chain": modules/15-ai-ml-orchestration/exercises/exercise_15_2_llm_chain.md
+              - "15.3: Data Preparation": modules/15-ai-ml-orchestration/exercises/exercise_15_3_data_prep.md
+      - "Module 16: Capstone Project":
+          - Overview: modules/16-capstone/README.md
+          - Exercises:
+              - "16.1: Foundation Setup": modules/16-capstone/exercises/exercise_16_1_setup.md
+              - "16.2: Ingestion Pipeline": modules/16-capstone/exercises/exercise_16_2_ingestion.md
+              - "16.3: LLM Processing": modules/16-capstone/exercises/exercise_16_3_llm_processing.md
+              - "16.4: Vector Store": modules/16-capstone/exercises/exercise_16_4_vector_store.md
+              - "16.5: Deployment": modules/16-capstone/exercises/exercise_16_5_deployment.md
+              - "16.6: Monitoring": modules/16-capstone/exercises/exercise_16_6_monitoring.md
+              - "16.7: Testing": modules/16-capstone/exercises/exercise_16_7_testing.md
 
   - Case Studies:
       - Overview: case-studies/README.md

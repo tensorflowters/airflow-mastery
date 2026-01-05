@@ -1,0 +1,65 @@
+# Capstone Project Pool Configuration
+# =====================================
+#
+# This file defines the Airflow pools used by the capstone project.
+# Apply these pools using the Airflow CLI:
+#
+#   airflow pools import pools.yaml
+#
+# Or create them via the Airflow UI under Admin > Pools
+
+pools:
+  # LLM API Pool
+  # Controls concurrent LLM API calls to prevent rate limiting
+  - name: llm_api
+    slots: 5
+    description: "LLM API rate limiting pool - max 5 concurrent calls"
+    include_deferred: false
+
+  # Embedding API Pool
+  # Controls concurrent embedding generation requests
+  - name: embedding_api
+    slots: 3
+    description: "Embedding API pool - max 3 concurrent calls"
+    include_deferred: false
+
+  # Database Connections Pool
+  # Limits concurrent database operations
+  - name: database_connections
+    slots: 10
+    description: "Database connection pool - max 10 concurrent connections"
+    include_deferred: false
+
+  # Vector Store Pool
+  # Controls concurrent vector store operations
+  - name: vector_store
+    slots: 5
+    description: "Vector store operations pool - max 5 concurrent operations"
+    include_deferred: false
+
+  # Heavy Compute Pool
+  # For CPU-intensive tasks like document parsing
+  - name: heavy_compute
+    slots: 2
+    description: "Heavy compute pool - max 2 concurrent CPU-intensive tasks"
+    include_deferred: false
+
+# Pool Priority Configuration
+# ---------------------------
+# Tasks can specify priority_weight to influence scheduling order
+# within pools. Higher weight = higher priority.
+#
+# Example usage in DAG:
+#
+#   @task(pool="llm_api", pool_slots=1, priority_weight=10)
+#   def high_priority_llm_call(): ...
+#
+#   @task(pool="llm_api", pool_slots=1, priority_weight=1)
+#   def low_priority_llm_call(): ...
+
+# Recommended Priority Weights
+# ----------------------------
+# Critical paths: 10
+# Standard tasks: 5 (default)
+# Background tasks: 1
+# Maintenance: 0

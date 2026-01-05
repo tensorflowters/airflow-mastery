@@ -42,6 +42,12 @@ Complete Apache Airflow 3.x learning path — from environment setup to producti
 | [**14**](14-resource-management/README.md) | Resource Management   | Pools, priorities, SLAs            |
 | [**15**](15-ai-ml-orchestration/README.md) | AI/ML Orchestration   | LLM pipelines, embeddings, RAG     |
 
+### :trophy: Capstone
+
+| Module                          | Topic            | Description                             |
+| ------------------------------- | ---------------- | --------------------------------------- |
+| [**16**](16-capstone/README.md) | Capstone Project | Production-grade AI document processing |
+
 ---
 
 ## Recommended Path
@@ -50,7 +56,8 @@ Complete Apache Airflow 3.x learning path — from environment setup to producti
 2. **Complete Modules 01-04** — Build solid fundamentals
 3. **Progress through 05-07** — Intermediate patterns
 4. **Advanced topics 08-10** — Production readiness
-5. **Specialized modules** — As needed for your use case
+5. **Specialized modules 11-15** — As needed for your use case
+6. **Complete Module 16** — Capstone project synthesizing all concepts
 
 ---
 
